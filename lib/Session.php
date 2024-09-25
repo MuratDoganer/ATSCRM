@@ -885,22 +885,38 @@ class CATSSession
                     );
                     $rs = $db->query($sql);
                 }
+                // Start output buffering to prevent "Headers Already Sent" errors
+                ob_start();
 
-                $cookie = $this->getCookie();
+                $cookieValue = $this->getCookie();
+                $expires = time() + 3600;  // Example expiration time, adjust as needed
+                $path = '/';
+                // $domain = 'example.com';   // Adjust as needed
+                $secure = true;            // Adjust based on your environment
+                $httponly = true;
+                $samesite = 'Strict';
+
+                // Manually append SameSite to the cookie header for PHP 7.2
+                setcookie('session_cookie', $cookieValue, $expires, "$path; SameSite=$samesite", $domain, $secure, $httponly);
+
+                // Update the user session in the database
                 $sql = sprintf(
                     "UPDATE
-                        user
-                     SET
-                        session_cookie = %s,
-                        force_logout = 0
-                     WHERE
+                    user
+                    SET
+                    force_logout = 0
+                        WHERE
                         user_id = %s
-                     AND
+                        AND
                         site_id = %s",
-                    $db->makeQueryString($cookie),
-                    $this->_userID,
-                    $this->_siteID
+                        $db->makeQueryString($this->_userID),
+                               $this->_siteID
                 );
+
+                // Flush the output buffer and send the output to the browser
+                ob_end_flush();
+
+
                 $rs = $db->query($sql);
 
                 break;
